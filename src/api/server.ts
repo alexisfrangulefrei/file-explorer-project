@@ -68,6 +68,18 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.post('/api/selection/deselect', (req, res) => {
+    try {
+      const resolvedPaths = parsePaths(req.body?.paths).map((entryPath) =>
+        resolveWithinRoots(entryPath)
+      );
+      explorer.deselectEntries(resolvedPaths);
+      res.json({ selection: explorer.getSelection() });
+    } catch (error) {
+      respondWithError(res, error);
+    }
+  });
+
   return app;
 }
 
