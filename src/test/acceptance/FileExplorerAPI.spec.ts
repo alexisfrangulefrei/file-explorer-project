@@ -39,6 +39,15 @@ test.describe('File Explorer API – listing', () => {
   });
 });
 
+test.describe('File Explorer API – selection snapshot', () => {
+  test('returns an empty selection before any interaction', async ({ request }) => {
+    const response = await request.get('/api/selection');
+
+    expect(response.ok()).toBe(true);
+    expect(await response.json()).toEqual({ selection: [] });
+  });
+});
+
 function startServer(): Promise<http.Server> {
   const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
   return new Promise((resolve) => {
