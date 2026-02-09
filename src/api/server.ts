@@ -52,8 +52,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   });
 
   app.get('/api/selection', (_req, res) => {
-    const selection = explorer.getSelection();
-    res.json({ selection });
+    res.json(createSelectionPayload(explorer));
   });
 
   app.post('/api/selection/select', (req, res) => {
@@ -62,7 +61,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
         resolveWithinRoots(entryPath)
       );
       explorer.selectEntries(resolvedPaths);
-      res.json({ selection: explorer.getSelection() });
+      res.json(createSelectionPayload(explorer));
     } catch (error) {
       respondWithError(res, error);
     }
@@ -74,7 +73,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
         resolveWithinRoots(entryPath)
       );
       explorer.deselectEntries(resolvedPaths);
-      res.json({ selection: explorer.getSelection() });
+      res.json(createSelectionPayload(explorer));
     } catch (error) {
       respondWithError(res, error);
     }
@@ -97,4 +96,8 @@ function isWithinAllowed(candidate: string, allowedRoots: string[]): boolean {
     const relative = path.relative(root, candidate);
     return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
   });
+}
+
+function createSelectionPayload(explorer: FileExplorer): { selection: string[] } {
+  return { selection: explorer.getSelection() };
 }
