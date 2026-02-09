@@ -36,14 +36,9 @@ export interface RandomPort {
   next(): number;
 }
 
-export interface OperationFailure {
-  path: string;
-  error: unknown;
-}
-
 export interface OperationResult {
   processed: string[];
-  failed: OperationFailure[];
+  failed: Array<{ path: string; error: unknown }>;
 }
 
 export class MathRandomPort implements RandomPort {
@@ -357,17 +352,15 @@ export class FileExplorer {
 
   // Executes an operation per source path while accumulating successes/failures.
   private async runOperation(selection: string[], performer: (source: string) => Promise<string>): Promise<OperationResult> {
-    const result: OperationResult = { processed: [], failed: [] };
-
-    for (const source of selection) {
+    return selection.reduce<Promise<OperationResult>>(async (accPromise, source) => {
+      const acc = await accPromise;
       try {
         const processed = await performer(source);
-        result.processed.push(processed);
+        acc.processed.push(processed);
       } catch (error) {
-        result.failed.push({ path: source, error });
+        acc.failed.push({ path: source, error });
       }
-    }
-
-    return result;
+      return acc;
+    }, Promise.resolve({ processed: [], failed: [] }));
   }
 }
