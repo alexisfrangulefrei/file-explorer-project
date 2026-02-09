@@ -239,6 +239,21 @@ describe('FileExplorer', () => {
       expect(fsPort.copyFile).toHaveBeenCalledWith('/root/file', '/dest/file');
       expect(fsPort.rm).toHaveBeenCalledWith('/root/file', { recursive: true, force: true });
     });
+
+    // Reports failures and keeps unsuccessful moves selected.
+    it('reports move failures and keeps failed entries selected', async () => {
+      explorer.selectEntries(['/root/ok', '/root/fail']);
+      fsPort.rename.mockResolvedValueOnce();
+      fsPort.rename.mockRejectedValueOnce(new Error('rename-fail'));
+      fsPort.stat.mockRejectedValueOnce(new Error('stat-fail'));
+
+      const result = await explorer.moveSelection('/dest');
+
+      expect(result.processed).toEqual(['/dest/ok']);
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].path).toBe('/root/fail');
+      expect(explorer.getSelection().sort()).toEqual(['/dest/ok', '/root/fail'].sort());
+    });
   });
 
   describe('deleteSelection', () => {
