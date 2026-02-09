@@ -130,7 +130,8 @@ describe('FileExplorer', () => {
 
       expect(fsPort.mkdir).toHaveBeenCalledWith('/dest', { recursive: true });
       expect(fsPort.copyFile).toHaveBeenCalledWith('/root/file', '/dest/file');
-      expect(result).toEqual(['/dest/file']);
+      expect(result.processed).toEqual(['/dest/file']);
+      expect(result.failed).toEqual([]);
     });
 
     // Generates unique destination when root is omitted.
@@ -144,7 +145,8 @@ describe('FileExplorer', () => {
       const result = await explorer.copySelection();
 
       expect(fsPort.mkdir).toHaveBeenCalledWith('/root/adjective-noun', { recursive: true });
-      expect(result).toEqual(['/root/adjective-noun/file']);
+      expect(result.processed).toEqual(['/root/adjective-noun/file']);
+      expect(result.failed).toEqual([]);
     });
 
     // Copies nested directory contents recursively.
@@ -159,9 +161,11 @@ describe('FileExplorer', () => {
       fsPort.stat.mockResolvedValueOnce(createStats('file'));
       fsPort.copyFile.mockResolvedValue();
 
-      await explorer.copySelection('/dest');
+      const result = await explorer.copySelection('/dest');
 
       expect(fsPort.copyFile).toHaveBeenCalledWith('/root/dir/nested.txt', '/dest/dir/nested.txt');
+      expect(result.processed).toEqual(['/dest/dir']);
+      expect(result.failed).toEqual([]);
     });
 
     // Ensures collisions beyond the retry limit fall back to numbered names.
@@ -182,7 +186,8 @@ describe('FileExplorer', () => {
       const result = await explorer.copySelection();
 
       expect(fsPort.mkdir).toHaveBeenCalledWith('/root/conflict-1', { recursive: true });
-      expect(result).toEqual(['/root/conflict-1/file']);
+      expect(result.processed).toEqual(['/root/conflict-1/file']);
+      expect(result.failed).toEqual([]);
     });
 
     // Reports copy errors and keeps failed entries selected.
@@ -195,7 +200,7 @@ describe('FileExplorer', () => {
       fsPort.mkdir.mockResolvedValue();
       fsPort.copyFile.mockResolvedValueOnce();
 
-      const outcome = (await explorer.copySelection('/dest')) as any;
+      const outcome = await explorer.copySelection('/dest');
 
       expect(outcome.processed).toEqual(['/dest/ok']);
       expect(outcome.failed).toHaveLength(1);

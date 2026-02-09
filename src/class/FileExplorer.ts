@@ -36,6 +36,16 @@ export interface RandomPort {
   next(): number;
 }
 
+export interface OperationFailure {
+  path: string;
+  error: unknown;
+}
+
+export interface OperationResult {
+  processed: string[];
+  failed: OperationFailure[];
+}
+
 export class MathRandomPort implements RandomPort {
   // Provides Math.random-backed entropy.
   next(): number {
@@ -213,19 +223,23 @@ export class FileExplorer {
   }
 
   // Copies every selected entry into the destination root or a generated directory.
-  async copySelection(destinationRoot?: string): Promise<string[]> {
+  async copySelection(destinationRoot?: string): Promise<OperationResult> {
     const selected = this.snapshotSelection();
     const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
-    const copiedPaths: string[] = [];
+    const result: OperationResult = { processed: [], failed: [] };
     for (const source of selected) {
       const target = path.join(destination, path.basename(source));
-      await this.copyEntryRecursive(source, target);
-      copiedPaths.push(target);
+      try {
+        await this.copyEntryRecursive(source, target);
+        result.processed.push(target);
+      } catch (error) {
+        result.failed.push({ path: source, error });
+      }
     }
 
-    return copiedPaths;
+    return result;
   }
 
   // Moves the selection, generating a destination when none is provided.
