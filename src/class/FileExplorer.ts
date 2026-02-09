@@ -281,13 +281,28 @@ export class FileExplorer {
     }
 
     const parentDirectory = path.dirname([...this.selection][0]);
-    let candidate: string;
+    const maxAttempts = 10;
+    let lastRandomName: string | null = null;
 
-    do {
-      candidate = path.join(parentDirectory, this.directoryNameGenerator.generate());
-    } while (await this.fsPort.exists(candidate));
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const randomName = this.directoryNameGenerator.generate();
+      lastRandomName = randomName;
+      const candidate = path.join(parentDirectory, randomName);
+      if (!(await this.fsPort.exists(candidate))) {
+        return candidate;
+      }
+    }
 
-    return candidate;
+    const baseName = lastRandomName ?? this.directoryNameGenerator.generate();
+    let suffix = 1;
+    // Adds numeric suffix to last generated name until unique.
+    while (true) {
+      const numberedCandidate = path.join(parentDirectory, `${baseName}-${suffix}`);
+      if (!(await this.fsPort.exists(numberedCandidate))) {
+        return numberedCandidate;
+      }
+      suffix += 1;
+    }
   }
 
   // Recursively copies files or directories into the provided destination.
