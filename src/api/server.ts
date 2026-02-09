@@ -45,7 +45,8 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   });
 
   app.get('/api/selection', (_req, res) => {
-    res.json({ selection: explorer.getSelection() });
+    const selection = explorer.getSelection();
+    res.json({ selection });
   });
 
   return app;
