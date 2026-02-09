@@ -63,6 +63,21 @@ test.describe('File Explorer API – selection mutations', () => {
 
     await expectSelection(request, [README_PATH, SRC_DIRECTORY]);
   });
+
+  test('allows deselecting specific paths without clearing others', async ({ request }) => {
+    await request.post('/api/selection/select', {
+      data: { paths: [README_PATH, SRC_DIRECTORY] }
+    });
+    await expectSelection(request, [README_PATH, SRC_DIRECTORY]);
+
+    const response = await request.post('/api/selection/deselect', {
+      data: { paths: [README_PATH] }
+    });
+
+    expect(response.ok()).toBe(true);
+    expect(await response.json()).toEqual({ selection: [SRC_DIRECTORY] });
+    await expectSelection(request, [SRC_DIRECTORY]);
+  });
 });
 
 function startServer(): Promise<http.Server> {
