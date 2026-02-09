@@ -236,21 +236,18 @@ export class FileExplorer {
   }
 
   // Moves the selection, generating a destination when none is provided.
-  async moveSelection(destinationRoot?: string): Promise<string[]> {
+  async moveSelection(destinationRoot?: string): Promise<OperationResult> {
     const selected = this.snapshotSelection();
     const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
-    const movedPaths: string[] = [];
-    for (const source of selected) {
+    return this.runOperation(selected, async (source) => {
       const target = path.join(destination, path.basename(source));
       await this.moveEntry(source, target);
       this.selection.delete(source);
       this.selection.add(target);
-      movedPaths.push(target);
-    }
-
-    return movedPaths;
+      return target;
+    });
   }
 
   // Deletes all selected entries from the filesystem.

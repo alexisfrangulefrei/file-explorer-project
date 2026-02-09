@@ -222,7 +222,8 @@ describe('FileExplorer', () => {
       fsPort.rename.mockResolvedValue();
       const result = await explorer.moveSelection('/dest');
       expect(fsPort.rename).toHaveBeenCalledWith('/root/file', '/dest/file');
-      expect(result).toEqual(['/dest/file']);
+      expect(result.processed).toEqual(['/dest/file']);
+      expect(result.failed).toEqual([]);
       expect(explorer.getSelection()).toEqual(['/dest/file']);
     });
 
@@ -234,10 +235,12 @@ describe('FileExplorer', () => {
       fsPort.copyFile.mockResolvedValue();
       fsPort.rm.mockResolvedValue();
 
-      await explorer.moveSelection('/dest');
+      const result = await explorer.moveSelection('/dest');
 
       expect(fsPort.copyFile).toHaveBeenCalledWith('/root/file', '/dest/file');
       expect(fsPort.rm).toHaveBeenCalledWith('/root/file', { recursive: true, force: true });
+      expect(result.processed).toEqual(['/dest/file']);
+      expect(result.failed).toEqual([]);
     });
 
     // Reports failures and keeps unsuccessful moves selected.
