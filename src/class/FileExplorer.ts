@@ -193,7 +193,11 @@ export class FileExplorer {
 
   // Adds arbitrary paths to the current selection.
   selectEntries(paths: string[]): void {
-    paths.forEach((entryPath) => this.selection.add(path.resolve(entryPath)));
+    paths.forEach((entryPath) => {
+      const resolvedPath = path.resolve(entryPath);
+      this.selection.delete(resolvedPath);
+      this.selection.add(resolvedPath);
+    });
   }
 
   // Replaces current selection with every provided entry.

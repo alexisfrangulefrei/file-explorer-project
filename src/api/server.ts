@@ -79,6 +79,15 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.post('/api/selection/clear', (_req, res) => {
+    try {
+      explorer.clearSelection();
+      res.json(createSelectionPayload(explorer));
+    } catch (error) {
+      respondWithError(res, error);
+    }
+  });
+
   return app;
 }
 
