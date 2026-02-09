@@ -1,4 +1,4 @@
-import { Dirent, Stats, promises as fsPromises } from 'fs';
+import { Dirent, promises as fsPromises } from 'fs';
 import * as path from 'path';
 
 export type EntryType = 'file' | 'directory';
@@ -9,9 +9,18 @@ export interface FileEntry {
   type: EntryType;
 }
 
+export interface FileSystemDirEntry {
+  name: string;
+  type: EntryType;
+}
+
+export interface FileSystemStatsSnapshot {
+  type: EntryType;
+}
+
 export interface FileSystemPort {
-  readDir(targetPath: string): Promise<Dirent[]>;
-  stat(targetPath: string): Promise<Stats>;
+  readDir(targetPath: string): Promise<FileSystemDirEntry[]>;
+  stat(targetPath: string): Promise<FileSystemStatsSnapshot>;
   copyFile(source: string, destination: string): Promise<void>;
   mkdir(targetPath: string, options?: { recursive?: boolean }): Promise<void>;
   rm(targetPath: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
@@ -21,6 +30,17 @@ export interface FileSystemPort {
 
 export interface DirectoryNameGenerator {
   generate(): string;
+}
+
+export interface RandomPort {
+  next(): number;
+}
+
+export class MathRandomPort implements RandomPort {
+  // Provides Math.random-backed entropy.
+  next(): number {
+    return Math.random();
+  }
 }
 
 const DEFAULT_ADJECTIVES: readonly string[] = [
@@ -74,7 +94,7 @@ export class RandomDirectoryNameGenerator implements DirectoryNameGenerator {
   constructor(
     private readonly adjectives: readonly string[] = DEFAULT_ADJECTIVES,
     private readonly nouns: readonly string[] = DEFAULT_NOUNS,
-    private readonly rng: () => number = Math.random
+    private readonly random: RandomPort = new MathRandomPort()
   ) {
     if (!adjectives.length || !nouns.length) {
       throw new Error('Both dictionaries must contain at least one entry.');
@@ -90,20 +110,22 @@ export class RandomDirectoryNameGenerator implements DirectoryNameGenerator {
 
   // Picks a single word from the provided dictionary using RNG.
   private pickOne(dictionary: readonly string[]): string {
-    const index = Math.floor(this.rng() * dictionary.length);
+    const index = Math.floor(this.random.next() * dictionary.length);
     return dictionary[index];
   }
 }
 
 export class NodeFileSystem implements FileSystemPort {
-  // Reads directory entries with Dirent metadata.
-  readDir(targetPath: string): Promise<Dirent[]> {
-    return fsPromises.readdir(targetPath, { withFileTypes: true });
+  // Reads directory entries with simple, mockable metadata.
+  async readDir(targetPath: string): Promise<FileSystemDirEntry[]> {
+    const entries = await fsPromises.readdir(targetPath, { withFileTypes: true });
+    return entries.map((dirent) => this.toDirEntry(dirent));
   }
 
   // Retrieves filesystem statistics for a given path.
-  stat(targetPath: string): Promise<Stats> {
-    return fsPromises.stat(targetPath);
+  async stat(targetPath: string): Promise<FileSystemStatsSnapshot> {
+    const stats = await fsPromises.stat(targetPath);
+    return { type: stats.isDirectory() ? 'directory' : 'file' };
   }
 
   // Copies a file from source to destination.
@@ -134,6 +156,14 @@ export class NodeFileSystem implements FileSystemPort {
     } catch {
       return false;
     }
+  }
+
+  // Converts Node.js Dirent into a test-friendly structure.
+  private toDirEntry(dirent: Dirent): FileSystemDirEntry {
+    return {
+      name: dirent.name,
+      type: dirent.isDirectory() ? 'directory' : 'file'
+    };
   }
 }
 
@@ -227,13 +257,13 @@ export class FileExplorer {
     }
   }
 
-  // Translates a Dirent into a FileEntry with absolute data.
-  private toFileEntry(directory: string, dirent: Dirent): FileEntry {
+  // Translates a filesystem entry into a FileEntry with absolute data.
+  private toFileEntry(directory: string, dirent: FileSystemDirEntry): FileEntry {
     const entryPath = path.join(directory, dirent.name);
     return {
       path: entryPath,
       name: dirent.name,
-      type: dirent.isDirectory() ? 'directory' : 'file'
+      type: dirent.type
     };
   }
 
@@ -263,7 +293,7 @@ export class FileExplorer {
   // Recursively copies files or directories into the provided destination.
   private async copyEntryRecursive(source: string, destination: string): Promise<void> {
     const stats = await this.fsPort.stat(source);
-    if (stats.isDirectory()) {
+    if (stats.type === 'directory') {
       await this.fsPort.mkdir(destination, { recursive: true });
       const entries = await this.fsPort.readDir(source);
       for (const entry of entries) {
