@@ -265,9 +265,11 @@ describe('FileExplorer', () => {
       explorer.selectEntries(['/root/a', '/root/b']);
       fsPort.rm.mockResolvedValue();
 
-      await explorer.deleteSelection();
+      const result = await explorer.deleteSelection();
 
       expect(fsPort.rm).toHaveBeenCalledTimes(2);
+      expect(result.processed).toEqual(['/root/a', '/root/b']);
+      expect(result.failed).toEqual([]);
       expect(explorer.getSelection()).toEqual([]);
     });
   });
