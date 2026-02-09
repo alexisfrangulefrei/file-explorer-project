@@ -1,0 +1,15 @@
+{
+  "name": "file-explorer-project",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Alexis FRANGUL, Tristan GONCALVES",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}
