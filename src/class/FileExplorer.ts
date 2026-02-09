@@ -228,18 +228,11 @@ export class FileExplorer {
     const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
-    const result: OperationResult = { processed: [], failed: [] };
-    for (const source of selected) {
+    return this.runOperation(selected, async (source) => {
       const target = path.join(destination, path.basename(source));
-      try {
-        await this.copyEntryRecursive(source, target);
-        result.processed.push(target);
-      } catch (error) {
-        result.failed.push({ path: source, error });
-      }
-    }
-
-    return result;
+      await this.copyEntryRecursive(source, target);
+      return target;
+    });
   }
 
   // Moves the selection, generating a destination when none is provided.
@@ -364,5 +357,21 @@ export class FileExplorer {
       await this.copyEntryRecursive(source, destination);
       await this.fsPort.rm(source, { recursive: true, force: true });
     }
+  }
+
+  // Executes an operation per source path while accumulating successes/failures.
+  private async runOperation(selection: string[], performer: (source: string) => Promise<string>): Promise<OperationResult> {
+    const result: OperationResult = { processed: [], failed: [] };
+
+    for (const source of selection) {
+      try {
+        const processed = await performer(source);
+        result.processed.push(processed);
+      } catch (error) {
+        result.failed.push({ path: source, error });
+      }
+    }
+
+    return result;
   }
 }
