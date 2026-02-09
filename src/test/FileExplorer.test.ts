@@ -68,7 +68,8 @@ describe('FileExplorer', () => {
     );
   });
 
-  describe('Step 3 – Core navigation and operations (tests steps 1 & 2 requirements)', () => {
+  // Feature: Step 3 – Core navigation and operations (tests steps 1 & 2 requirements)
+  describe('core navigation and operations', () => {
     // Feature: Step 3 (Step 1 requirement) – Directory enumeration.
     describe('listEntries', () => {
       // Verifies listing order and metadata shape.
