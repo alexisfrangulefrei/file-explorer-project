@@ -44,6 +44,10 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.get('/api/selection', (_req, res) => {
+    res.json({ selection: explorer.getSelection() });
+  });
+
   return app;
 }
 
