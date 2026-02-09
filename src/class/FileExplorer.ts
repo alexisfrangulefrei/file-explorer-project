@@ -193,11 +193,7 @@ export class FileExplorer {
 
   // Adds arbitrary paths to the current selection.
   selectEntries(paths: string[]): void {
-    paths.forEach((entryPath) => {
-      const resolvedPath = path.resolve(entryPath);
-      this.selection.delete(resolvedPath);
-      this.selection.add(resolvedPath);
-    });
+    paths.forEach((entryPath) => this.addToSelection(entryPath));
   }
 
   // Replaces current selection with every provided entry.
@@ -208,7 +204,7 @@ export class FileExplorer {
 
   // Removes specific paths from the selection set.
   deselectEntries(paths: string[]): void {
-    paths.forEach((entryPath) => this.selection.delete(path.resolve(entryPath)));
+    paths.forEach((entryPath) => this.selection.delete(this.normalizePath(entryPath)));
   }
 
   // Clears the selection entirely.
@@ -266,6 +262,16 @@ export class FileExplorer {
       name: dirent.name,
       type: dirent.type
     };
+  }
+
+  private addToSelection(entryPath: string): void {
+    const normalizedPath = this.normalizePath(entryPath);
+    this.selection.delete(normalizedPath);
+    this.selection.add(normalizedPath);
+  }
+
+  private normalizePath(entryPath: string): string {
+    return path.resolve(entryPath);
   }
 
   // Guarantees that at least one entry is selected before acting.
