@@ -184,6 +184,25 @@ describe('FileExplorer', () => {
       expect(fsPort.mkdir).toHaveBeenCalledWith('/root/conflict-1', { recursive: true });
       expect(result).toEqual(['/root/conflict-1/file']);
     });
+
+    // Reports copy errors and keeps failed entries selected.
+    it('reports copy failures and preserves selection for failed entries', async () => {
+      explorer.selectEntries(['/root/ok', '/root/fail']);
+      fsPort.stat
+        .mockResolvedValueOnce(createStats('file'))
+        .mockRejectedValueOnce(new Error('stat-fail'));
+      fsPort.exists.mockResolvedValue(false);
+      fsPort.mkdir.mockResolvedValue();
+      fsPort.copyFile.mockResolvedValueOnce();
+
+      const outcome = (await explorer.copySelection('/dest')) as any;
+
+      expect(outcome.processed).toEqual(['/dest/ok']);
+      expect(outcome.failed).toHaveLength(1);
+      expect(outcome.failed[0].path).toBe('/root/fail');
+      expect(outcome.failed[0].error).toBeInstanceOf(Error);
+      expect(explorer.getSelection()).toEqual(['/root/ok', '/root/fail']);
+    });
   });
 
   describe('moveSelection', () => {
