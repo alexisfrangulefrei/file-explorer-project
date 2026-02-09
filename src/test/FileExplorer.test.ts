@@ -163,6 +163,27 @@ describe('FileExplorer', () => {
 
       expect(fsPort.copyFile).toHaveBeenCalledWith('/root/dir/nested.txt', '/dest/dir/nested.txt');
     });
+
+    // Ensures collisions beyond the retry limit fall back to numbered names.
+    it('numbers destination after exceeding random attempts', async () => {
+      explorer = new FileExplorer(
+        fsPort,
+        new SequenceDirectoryNameGenerator(new Array(10).fill('conflict'))
+      );
+      explorer.selectEntries(['/root/file']);
+      fsPort.stat.mockResolvedValue(createStats('file'));
+      for (let i = 0; i < 10; i++) {
+        fsPort.exists.mockResolvedValueOnce(true);
+      }
+      fsPort.exists.mockResolvedValueOnce(false);
+      fsPort.mkdir.mockResolvedValue();
+      fsPort.copyFile.mockResolvedValue();
+
+      const result = await explorer.copySelection();
+
+      expect(fsPort.mkdir).toHaveBeenCalledWith('/root/conflict-1', { recursive: true });
+      expect(result).toEqual(['/root/conflict-1/file']);
+    });
   });
 
   describe('moveSelection', () => {
