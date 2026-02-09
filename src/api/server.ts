@@ -8,16 +8,15 @@ export interface FileExplorerApiOptions {
 }
 
 export function createFileExplorerApp(options: FileExplorerApiOptions = {}): express.Express {
-  const explorer = options.explorer ?? new FileExplorer(new NodeFileSystem());
-  const allowedRoots = (options.allowedRoots?.length ? options.allowedRoots : [process.cwd()])
-    .map((root) => path.resolve(root));
+  const explorer = options.explorer ?? createDefaultExplorer();
+  const allowedRoots = normalizeRoots(options.allowedRoots);
 
   const app = express();
   app.use(express.json());
 
   const resolveWithinRoots = (inputPath?: string): string => {
     const candidate = path.resolve(inputPath ?? allowedRoots[0]);
-    if (!isWithinAllowed(candidate)) {
+    if (!isWithinAllowed(candidate, allowedRoots)) {
       throw new Error('Path is outside the allowed roots.');
     }
     return candidate;
@@ -45,11 +44,21 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
-  const isWithinAllowed = (candidate: string): boolean =>
-    allowedRoots.some((root) => {
-      const relative = path.relative(root, candidate);
-      return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-    });
-
   return app;
+}
+
+function createDefaultExplorer(): FileExplorer {
+  return new FileExplorer(new NodeFileSystem());
+}
+
+function normalizeRoots(roots?: string[]): string[] {
+  const candidates = roots?.length ? roots : [process.cwd()];
+  return candidates.map((root) => path.resolve(root));
+}
+
+function isWithinAllowed(candidate: string, allowedRoots: string[]): boolean {
+  return allowedRoots.some((root) => {
+    const relative = path.relative(root, candidate);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  });
 }

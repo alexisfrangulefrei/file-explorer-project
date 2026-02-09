@@ -18,26 +18,11 @@ const EXPECTED_ENTRIES = [
 let apiServer: http.Server;
 
 test.beforeAll(async () => {
-  const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
-  await new Promise<void>((resolve) => {
-    apiServer = app.listen(4173, resolve);
-  });
+  apiServer = await startServer();
 });
 
 test.afterAll(async () => {
-  await new Promise<void>((resolve, reject) => {
-    if (!apiServer) {
-      resolve();
-      return;
-    }
-    apiServer.close((error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
+  await stopServer(apiServer);
 });
 
 test.describe('File Explorer API – listing', () => {
@@ -53,3 +38,26 @@ test.describe('File Explorer API – listing', () => {
     });
   });
 });
+
+function startServer(): Promise<http.Server> {
+  const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
+  return new Promise((resolve) => {
+    const server = app.listen(4173, () => resolve(server));
+  });
+}
+
+function stopServer(server?: http.Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!server) {
+      resolve();
+      return;
+    }
+    server.close((error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
