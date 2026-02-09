@@ -214,12 +214,12 @@ export class FileExplorer {
 
   // Copies every selected entry into the destination root or a generated directory.
   async copySelection(destinationRoot?: string): Promise<string[]> {
-    this.ensureSelection();
-    const destination = await this.resolveDestination(destinationRoot);
+    const selected = this.snapshotSelection();
+    const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
     const copiedPaths: string[] = [];
-    for (const source of this.selection) {
+    for (const source of selected) {
       const target = path.join(destination, path.basename(source));
       await this.copyEntryRecursive(source, target);
       copiedPaths.push(target);
@@ -230,12 +230,12 @@ export class FileExplorer {
 
   // Moves the selection, generating a destination when none is provided.
   async moveSelection(destinationRoot?: string): Promise<string[]> {
-    this.ensureSelection();
-    const destination = await this.resolveDestination(destinationRoot);
+    const selected = this.snapshotSelection();
+    const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
     const movedPaths: string[] = [];
-    for (const source of [...this.selection]) {
+    for (const source of selected) {
       const target = path.join(destination, path.basename(source));
       await this.moveEntry(source, target);
       this.selection.delete(source);
@@ -248,8 +248,7 @@ export class FileExplorer {
 
   // Deletes all selected entries from the filesystem.
   async deleteSelection(): Promise<void> {
-    this.ensureSelection();
-    const selected = [...this.selection];
+    const selected = this.snapshotSelection();
 
     for (const source of selected) {
       await this.fsPort.rm(source, { recursive: true, force: true });
@@ -274,13 +273,29 @@ export class FileExplorer {
     }
   }
 
+  // Produces a snapshot of the current selection while enforcing its presence.
+  private snapshotSelection(): string[] {
+    this.ensureSelection();
+    return [...this.selection];
+  }
+
   // Computes the destination directory, generating a unique name when missing.
-  private async resolveDestination(destinationRoot?: string): Promise<string> {
+  private async resolveDestination(selection: string[], destinationRoot?: string): Promise<string> {
     if (destinationRoot) {
       return path.resolve(destinationRoot);
     }
 
-    const parentDirectory = path.dirname([...this.selection][0]);
+    const parentDirectory = path.dirname(selection[0]);
+    const { candidate, lastRandomName } = await this.tryRandomDestination(parentDirectory);
+    if (candidate) {
+      return candidate;
+    }
+
+    return this.generateNumberedDestination(parentDirectory, lastRandomName);
+  }
+
+  // Attempts to find a free directory using random names.
+  private async tryRandomDestination(parentDirectory: string): Promise<{ candidate: string | null; lastRandomName: string | null }> {
     const maxAttempts = 10;
     let lastRandomName: string | null = null;
 
@@ -289,13 +304,18 @@ export class FileExplorer {
       lastRandomName = randomName;
       const candidate = path.join(parentDirectory, randomName);
       if (!(await this.fsPort.exists(candidate))) {
-        return candidate;
+        return { candidate, lastRandomName };
       }
     }
 
+    return { candidate: null, lastRandomName };
+  }
+
+  // Falls back to suffixing the last random name (or a fresh one) until unique.
+  private async generateNumberedDestination(parentDirectory: string, lastRandomName: string | null): Promise<string> {
     const baseName = lastRandomName ?? this.directoryNameGenerator.generate();
     let suffix = 1;
-    // Adds numeric suffix to last generated name until unique.
+
     while (true) {
       const numberedCandidate = path.join(parentDirectory, `${baseName}-${suffix}`);
       if (!(await this.fsPort.exists(numberedCandidate))) {
