@@ -27,6 +27,13 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     res.status(400).json({ error: message });
   };
 
+  const parsePaths = (candidate: unknown): string[] => {
+    if (!Array.isArray(candidate) || candidate.some((value) => typeof value !== 'string')) {
+      throw new Error('paths must be an array of strings.');
+    }
+    return candidate as string[];
+  };
+
   app.get('/api/files', async (req, res) => {
     try {
       const directory = resolveWithinRoots(typeof req.query.path === 'string' ? req.query.path : undefined);
@@ -47,6 +54,18 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   app.get('/api/selection', (_req, res) => {
     const selection = explorer.getSelection();
     res.json({ selection });
+  });
+
+  app.post('/api/selection/select', (req, res) => {
+    try {
+      const resolvedPaths = parsePaths(req.body?.paths).map((entryPath) =>
+        resolveWithinRoots(entryPath)
+      );
+      explorer.selectEntries(resolvedPaths);
+      res.json({ selection: explorer.getSelection() });
+    } catch (error) {
+      respondWithError(res, error);
+    }
   });
 
   return app;
