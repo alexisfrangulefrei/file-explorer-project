@@ -48,6 +48,20 @@ test.describe('File Explorer API – selection snapshot', () => {
   });
 });
 
+test.describe('File Explorer API – selection mutations', () => {
+  test('allows selecting multiple paths in a single request', async ({ request }) => {
+    const initial = await request.get('/api/selection');
+    expect(await initial.json()).toEqual({ selection: [] });
+
+    const selectResponse = await request.post('/api/selection/select', {
+      data: { paths: [README_PATH, SRC_DIRECTORY] }
+    });
+
+    expect(selectResponse.ok()).toBe(true);
+    expect(await selectResponse.json()).toEqual({ selection: [README_PATH, SRC_DIRECTORY] });
+  });
+});
+
 function startServer(): Promise<http.Server> {
   const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
   return new Promise((resolve) => {
