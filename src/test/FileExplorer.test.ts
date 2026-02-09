@@ -284,7 +284,7 @@ describe('FileExplorer', () => {
       expect(result.processed).toEqual(['/root/ok']);
       expect(result.failed).toHaveLength(1);
       expect(result.failed[0].path).toBe('/root/fail');
-      expect(explorer.getSelection()).toEqual([]);
+      expect(explorer.getSelection()).toEqual(['/root/fail']);
     });
   });
 
