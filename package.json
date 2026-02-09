@@ -1,7 +1,7 @@
 {
   "name": "file-explorer-project",
   "version": "1.0.0",
-  "description": "",
+  "description": "Small TypeScript file explorer project meant to practice class tests with dependencies and Test-Driven Development (TDD).",
   "license": "ISC",
   "author": "Alexis FRANGUL, Tristan GONCALVES",
   "type": "commonjs",
@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^25.2.2",
     "vitest": "^4.0.18"
   }
 }
