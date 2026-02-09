@@ -272,6 +272,20 @@ describe('FileExplorer', () => {
       expect(result.failed).toEqual([]);
       expect(explorer.getSelection()).toEqual([]);
     });
+
+    // Reports delete failures and keeps failed entries selected.
+    it('reports delete failures and keeps failed entries selected', async () => {
+      explorer.selectEntries(['/root/ok', '/root/fail']);
+      fsPort.rm.mockResolvedValueOnce(undefined);
+      fsPort.rm.mockRejectedValueOnce(new Error('rm-fail'));
+
+      const result = await explorer.deleteSelection();
+
+      expect(result.processed).toEqual(['/root/ok']);
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0].path).toBe('/root/fail');
+      expect(explorer.getSelection()).toEqual([]);
+    });
   });
 
   describe('RandomDirectoryNameGenerator', () => {
