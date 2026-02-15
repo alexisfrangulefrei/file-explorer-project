@@ -236,13 +236,16 @@ export class FileExplorer {
     const destination = await this.resolveDestination(selected, destinationRoot);
     await this.fsPort.mkdir(destination, { recursive: true });
 
-    return this.runOperation(selected, async (source) => {
+    const outcome = await this.runOperation(selected, async (source) => {
       const target = path.join(destination, path.basename(source));
       await this.moveEntry(source, target);
       this.selection.delete(source);
       this.selection.add(target);
       return target;
     });
+
+    this.normalizeSelectionOrder();
+    return outcome;
   }
 
   // Deletes all selected entries from the filesystem.
@@ -272,6 +275,12 @@ export class FileExplorer {
 
   private normalizePath(entryPath: string): string {
     return path.resolve(entryPath);
+  }
+
+  private normalizeSelectionOrder(): void {
+    const orderedSelection = [...this.selection].sort();
+    this.selection.clear();
+    orderedSelection.forEach((entryPath) => this.selection.add(entryPath));
   }
 
   // Guarantees that at least one entry is selected before acting.
