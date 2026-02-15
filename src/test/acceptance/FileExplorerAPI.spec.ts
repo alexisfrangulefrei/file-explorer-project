@@ -317,6 +317,31 @@ test.describe('File Explorer API – delete selection', () => {
       await dispose();
     }
   });
+
+  test('deletes multiple entries in a single request', async ({ request }) => {
+    const filenames = ['temp-delete-b.txt', 'temp-delete-a.txt'];
+    const { paths: sourcePaths, dispose } = await createTemporarySourceEntries(filenames);
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: sourcePaths }
+      });
+      await expectSelection(request, sourcePaths);
+
+      const response = await deleteSelection(request);
+
+      expect(response.ok()).toBe(true);
+      const payload = await response.json();
+      expect(payload.processed).toEqual([...sourcePaths].sort());
+      expect(payload.failed).toEqual([]);
+      expect(payload.selection).toEqual([]);
+
+      await Promise.all(sourcePaths.map(assertFileMissing));
+      await expectSelection(request, []);
+    } finally {
+      await dispose();
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
