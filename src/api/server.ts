@@ -34,6 +34,9 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     return candidate as string[];
   };
 
+  const resolveRequestPaths = (candidate: unknown): string[] =>
+    parsePaths(candidate).map((entryPath) => resolveWithinRoots(entryPath));
+
   const parseDestinationRoot = (candidate: unknown): string | undefined => {
     if (candidate == null) {
       return undefined;
@@ -67,9 +70,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
 
   app.post('/api/selection/select', (req, res) => {
     try {
-      const resolvedPaths = parsePaths(req.body?.paths).map((entryPath) =>
-        resolveWithinRoots(entryPath)
-      );
+      const resolvedPaths = resolveRequestPaths(req.body?.paths);
       explorer.selectEntries(resolvedPaths);
       res.json(createSelectionPayload(explorer));
     } catch (error) {
@@ -79,9 +80,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
 
   app.post('/api/selection/deselect', (req, res) => {
     try {
-      const resolvedPaths = parsePaths(req.body?.paths).map((entryPath) =>
-        resolveWithinRoots(entryPath)
-      );
+      const resolvedPaths = resolveRequestPaths(req.body?.paths);
       explorer.deselectEntries(resolvedPaths);
       res.json(createSelectionPayload(explorer));
     } catch (error) {
