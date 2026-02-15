@@ -187,6 +187,38 @@ test.describe('File Explorer API – move selection', () => {
       await disposeDestination();
     }
   });
+
+  test('moves multiple selected entries in one request', async ({ request }) => {
+    const { destinationRoot, dispose: disposeDestination } = await useDestinationRoot(request);
+    const filenames = ['temp-b.txt', 'temp-a.txt'];
+    const { paths: sourcePaths, dispose: disposeSources } = await createTemporarySourceEntries(filenames);
+    const expectedMovedPaths = sourcePaths
+      .map((sourcePath) => path.join(destinationRoot, path.basename(sourcePath)))
+      .sort();
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: sourcePaths }
+      });
+
+      const response = await request.post('/api/selection/move', {
+        data: { destinationRoot }
+      });
+
+      expect(response.ok()).toBe(true);
+      const payload = await response.json();
+      expect(payload.processed).toEqual(expectedMovedPaths);
+      expect(payload.failed).toEqual([]);
+      expect(payload.selection).toEqual(expectedMovedPaths);
+
+      await Promise.all(expectedMovedPaths.map(assertFileExists));
+      await Promise.all(sourcePaths.map(assertFileMissing));
+      await expectSelection(request, expectedMovedPaths);
+    } finally {
+      await disposeSources();
+      await disposeDestination();
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
