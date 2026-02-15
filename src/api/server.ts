@@ -51,14 +51,9 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     res: Response,
     result: OperationResult,
     explorerInstance: FileExplorer,
-    failureMessage: string,
-    options: { sortProcessed?: boolean } = {}
+    failureMessage: string
   ): void => {
     const payload = createOperationPayload(result, explorerInstance);
-
-    if (options.sortProcessed) {
-      payload.processed = [...payload.processed].sort();
-    }
 
     if (payload.failed.length) {
       res.status(422).json({
@@ -135,7 +130,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
       const result = await explorer.moveSelection(destinationRoot);
-      sendOperationResponse(res, result, explorer, 'Failed to move selection.', { sortProcessed: true });
+      sendOperationResponse(res, result, explorer, 'Failed to move selection.');
     } catch (error) {
       respondWithError(res, error);
     }
