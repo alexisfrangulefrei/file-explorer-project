@@ -342,6 +342,21 @@ test.describe('File Explorer API – delete selection', () => {
       await dispose();
     }
   });
+
+  test('returns a validation error when delete is requested with an empty selection', async ({ request }) => {
+    const response = await deleteSelection(request);
+
+    expect(response.status()).toBe(422);
+    expect(await response.json()).toEqual({
+      error: 'Failed to delete selection.',
+      details: {
+        processed: [],
+        failed: [],
+        selection: [],
+        validationErrors: ['Selection cannot be empty.']
+      }
+    });
+  });
 });
 
 function startServer(): Promise<http.Server> {
