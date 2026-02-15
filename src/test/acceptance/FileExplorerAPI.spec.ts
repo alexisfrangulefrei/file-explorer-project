@@ -284,6 +284,39 @@ test.describe('File Explorer API – move selection', () => {
   });
 });
 
+test.describe('File Explorer API – delete selection', () => {
+  test.beforeEach(async ({ request }) => {
+    await request.post('/api/selection/clear');
+  });
+
+  test('deletes the current selection', async ({ request }) => {
+    const { paths: sourcePaths, dispose } = await createTemporarySourceEntries(['temp-delete.txt']);
+    const [targetPath] = sourcePaths;
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: [targetPath] }
+      });
+      await expectSelection(request, [targetPath]);
+
+      const response = await request.delete('/api/selection');
+
+      expect(response.ok()).toBe(true);
+      const payload = await response.json();
+      expect(payload).toEqual({
+        processed: [targetPath],
+        failed: [],
+        selection: []
+      });
+
+      await assertFileMissing(targetPath);
+      await expectSelection(request, []);
+    } finally {
+      await dispose();
+    }
+  });
+});
+
 function startServer(): Promise<http.Server> {
   const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
   return new Promise((resolve) => {
