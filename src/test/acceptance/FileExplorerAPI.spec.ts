@@ -96,8 +96,7 @@ test.describe('File Explorer API – selection mutations', () => {
 
 test.describe('File Explorer API – copy selection', () => {
   test('copies the current selection into the provided destination root', async ({ request }) => {
-    await request.post('/api/selection/clear');
-    const destinationRoot = await createDestinationRoot();
+    const { destinationRoot, dispose } = await useDestinationRoot(request);
     const expectedReadmeCopy = path.join(destinationRoot, 'README.md');
 
     try {
@@ -120,14 +119,12 @@ test.describe('File Explorer API – copy selection', () => {
       await expectSelection(request, [README_PATH]);
       await assertFileExists(expectedReadmeCopy);
     } finally {
-      await cleanupPath(destinationRoot);
-      await request.post('/api/selection/clear');
+      await dispose();
     }
   });
 
   test('returns a failure response when copy cannot process the selection', async ({ request }) => {
-    await request.post('/api/selection/clear');
-    const destinationRoot = await createDestinationRoot();
+    const { destinationRoot, dispose } = await useDestinationRoot(request);
     const missingPath = path.join(FIXTURE_ROOT, 'does-not-exist.txt');
 
     try {
@@ -153,8 +150,7 @@ test.describe('File Explorer API – copy selection', () => {
         selection: [missingPath]
       });
     } finally {
-      await cleanupPath(destinationRoot);
-      await request.post('/api/selection/clear');
+      await dispose();
     }
   });
 });
@@ -188,12 +184,13 @@ async function expectSelection(request: APIRequestContext, expected: string[]): 
   expect(await response.json()).toEqual({ selection: expected });
 }
 
-async function createDestinationRoot(): Promise<string> {
-  return fs.mkdtemp(path.join(FIXTURE_ROOT, '.copy-destination-'));
-}
-
-async function cleanupPath(target: string): Promise<void> {
-  await fs.rm(target, { recursive: true, force: true });
+async function useDestinationRoot(request: APIRequestContext): Promise<{ destinationRoot: string; dispose: () => Promise<void> }> {
+  const destinationRoot = await fs.mkdtemp(path.join(FIXTURE_ROOT, '.copy-destination-'));
+  const dispose = async (): Promise<void> => {
+    await fs.rm(destinationRoot, { recursive: true, force: true });
+    await request.post('/api/selection/clear');
+  };
+  return { destinationRoot, dispose };
 }
 
 async function assertFileExists(target: string): Promise<void> {
