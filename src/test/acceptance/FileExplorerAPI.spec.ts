@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
+import { promises as fs } from 'fs';
 import http from 'http';
 import path from 'path';
 import { createFileExplorerApp } from '../../api/server';
@@ -93,6 +94,38 @@ test.describe('File Explorer API – selection mutations', () => {
   });
 });
 
+test.describe('File Explorer API – copy selection', () => {
+  test('copies the current selection into the provided destination root', async ({ request }) => {
+    await request.post('/api/selection/clear');
+    const destinationRoot = await createDestinationRoot();
+    const expectedReadmeCopy = path.join(destinationRoot, 'README.md');
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: [README_PATH] }
+      });
+
+      const response = await request.post('/api/selection/copy', {
+        data: { destinationRoot }
+      });
+
+      expect(response.ok()).toBe(true);
+      const payload = await response.json();
+      expect(payload).toEqual({
+        processed: [expectedReadmeCopy],
+        failed: [],
+        selection: [README_PATH]
+      });
+
+      await expectSelection(request, [README_PATH]);
+      await assertFileExists(expectedReadmeCopy);
+    } finally {
+      await cleanupPath(destinationRoot);
+      await request.post('/api/selection/clear');
+    }
+  });
+});
+
 function startServer(): Promise<http.Server> {
   const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
   return new Promise((resolve) => {
@@ -120,4 +153,17 @@ async function expectSelection(request: APIRequestContext, expected: string[]): 
   const response = await request.get('/api/selection');
   expect(response.ok()).toBe(true);
   expect(await response.json()).toEqual({ selection: expected });
+}
+
+async function createDestinationRoot(): Promise<string> {
+  return fs.mkdtemp(path.join(FIXTURE_ROOT, '.copy-destination-'));
+}
+
+async function cleanupPath(target: string): Promise<void> {
+  await fs.rm(target, { recursive: true, force: true });
+}
+
+async function assertFileExists(target: string): Promise<void> {
+  const stats = await fs.stat(target);
+  expect(stats.isFile()).toBe(true);
 }
