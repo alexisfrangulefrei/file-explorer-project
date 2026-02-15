@@ -219,6 +219,29 @@ test.describe('File Explorer API – move selection', () => {
       await disposeDestination();
     }
   });
+
+  test('returns a validation error when move is requested with an empty selection', async ({ request }) => {
+    const { destinationRoot, dispose } = await useDestinationRoot(request);
+
+    try {
+      const response = await request.post('/api/selection/move', {
+        data: { destinationRoot }
+      });
+
+      expect(response.status()).toBe(422);
+      const payload = await response.json();
+      expect(payload).toEqual({
+        error: 'Failed to move selection.',
+        details: {
+          processed: [],
+          failed: [],
+          selection: []
+        }
+      });
+    } finally {
+      await dispose();
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
