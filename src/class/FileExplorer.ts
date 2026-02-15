@@ -279,7 +279,7 @@ export class FileExplorer {
   }
 
   private normalizeOperationOutcome(result: OperationResult, options: { synchronizeSelection?: boolean } = {}): OperationResult {
-    if (options.synchronizeSelection) {
+    if (options.synchronizeSelection && !result.failed.length) {
       this.normalizeSelectionOrder();
     }
     result.processed.sort();
