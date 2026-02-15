@@ -242,6 +242,42 @@ test.describe('File Explorer API – move selection', () => {
       await dispose();
     }
   });
+
+  test('returns a failure response when move cannot process the selection', async ({ request }) => {
+    const { destinationRoot, dispose } = await useDestinationRoot(request);
+    const missingPath = path.join(FIXTURE_ROOT, 'missing-move-source.txt');
+    const missingPathTwo = path.join(FIXTURE_ROOT, 'missing-move-source-2.txt');
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: [missingPath, missingPathTwo] }
+      });
+
+      const response = await request.post('/api/selection/move', {
+        data: { destinationRoot }
+      });
+
+      expect(response.status()).toBe(422);
+      const payload = await response.json();
+      expect(payload.error).toBe('Failed to move selection.');
+      expect(payload.details).toEqual({
+        processed: [],
+        failed: [
+          {
+            path: missingPath,
+            error: expect.stringContaining('ENOENT')
+          },
+          {
+            path: missingPathTwo,
+            error: expect.stringContaining('ENOENT')
+          }
+        ],
+        selection: [missingPath, missingPathTwo]
+      });
+    } finally {
+      await dispose();
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
