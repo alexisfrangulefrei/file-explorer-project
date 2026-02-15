@@ -47,15 +47,20 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     return resolveWithinRoots(candidate);
   };
 
+  interface OperationResponseOptions {
+    forceFailure?: boolean;
+  }
+
   const sendOperationResponse = (
     res: Response,
     result: OperationResult,
     explorerInstance: FileExplorer,
-    failureMessage: string
+    failureMessage: string,
+    options: OperationResponseOptions = {}
   ): void => {
     const payload = createOperationPayload(result, explorerInstance);
 
-    if (payload.failed.length) {
+    if (options.forceFailure || payload.failed.length) {
       res.status(422).json({
         error: failureMessage,
         details: payload
@@ -129,6 +134,12 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   app.post('/api/selection/move', async (req, res) => {
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
+      if (!explorer.getSelection().length) {
+        sendOperationResponse(res, { processed: [], failed: [] }, explorer, 'Failed to move selection.', {
+          forceFailure: true
+        });
+        return;
+      }
       const result = await explorer.moveSelection(destinationRoot);
       sendOperationResponse(res, result, explorer, 'Failed to move selection.');
     } catch (error) {
