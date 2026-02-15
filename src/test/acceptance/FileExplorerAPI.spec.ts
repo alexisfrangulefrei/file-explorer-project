@@ -136,10 +136,7 @@ test.describe('File Explorer API – copy selection', () => {
         data: { destinationRoot }
       });
 
-      expect(response.status()).toBe(422);
-      const payload = await response.json();
-      expect(payload.error).toBe('Failed to copy selection.');
-      expect(payload.details).toEqual({
+      await expectSelectionOperationFailure(response, 'Failed to copy selection.', {
         processed: [],
         failed: [
           {
@@ -253,10 +250,7 @@ test.describe('File Explorer API – move selection', () => {
         data: { destinationRoot }
       });
 
-      expect(response.status()).toBe(422);
-      const payload = await response.json();
-      expect(payload.error).toBe('Failed to move selection.');
-      expect(payload.details).toEqual({
+      await expectSelectionOperationFailure(response, 'Failed to move selection.', {
         processed: [],
         failed: [
           {
@@ -352,10 +346,7 @@ test.describe('File Explorer API – delete selection', () => {
 
       const response = await deleteSelection(request);
 
-      expect(response.status()).toBe(422);
-      const payload = await response.json();
-      expect(payload.error).toBe('Failed to delete selection.');
-      expect(payload.details).toEqual({
+      await expectSelectionOperationFailure(response, 'Failed to delete selection.', {
         processed: [],
         failed: [
           {
@@ -412,6 +403,21 @@ async function expectEmptySelectionValidationFailure(response: APIResponse, erro
       validationErrors: ['Selection cannot be empty.']
     }
   });
+}
+
+async function expectSelectionOperationFailure(
+  response: APIResponse,
+  errorMessage: string,
+  expectedDetails: {
+    processed: string[];
+    failed: Array<{ path: string; error: unknown; code?: unknown }>;
+    selection: string[];
+  }
+): Promise<void> {
+  expect(response.status()).toBe(422);
+  const payload = await response.json();
+  expect(payload.error).toBe(errorMessage);
+  expect(payload.details).toEqual(expectedDetails);
 }
 
 async function createDeletionBlockedEntry(): Promise<{ blockedPath: string; dispose: () => Promise<void> }> {
