@@ -13,10 +13,16 @@ Small TypeScript file explorer project meant to practice class tests with depend
 npm install
 ```
 
-## Run the Test Suite
+## Run the Unit Tests
 
 ```bash
 npm test
+```
+
+## Run the E2E Tests
+
+```bash
+npm run test:e2e
 ```
 
 ## Authors

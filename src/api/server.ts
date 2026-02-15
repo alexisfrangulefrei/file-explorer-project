@@ -7,6 +7,7 @@ export interface FileExplorerApiOptions {
   allowedRoots?: string[];
 }
 
+// Builds an Express application that proxies requests to a FileExplorer instance.
 export function createFileExplorerApp(options: FileExplorerApiOptions = {}): express.Express {
   const explorer = options.explorer ?? createDefaultExplorer();
   const allowedRoots = normalizeRoots(options.allowedRoots);
@@ -14,6 +15,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   const app = express();
   app.use(express.json());
 
+  // Resolves user-provided paths while ensuring they stay within allowed roots.
   const resolveWithinRoots = (inputPath?: string): string => {
     const candidate = path.resolve(inputPath ?? allowedRoots[0]);
     if (!isWithinAllowed(candidate, allowedRoots)) {
@@ -22,11 +24,13 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     return candidate;
   };
 
+  // Sends a consistent 400 response when parsing or validation fails.
   const respondWithError = (res: Response, error: unknown): void => {
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(400).json({ error: message });
   };
 
+  // Validates a request body array of paths before resolution.
   const parsePaths = (candidate: unknown): string[] => {
     if (!Array.isArray(candidate) || candidate.some((value) => typeof value !== 'string')) {
       throw new Error('paths must be an array of strings.');
@@ -34,9 +38,11 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     return candidate as string[];
   };
 
+  // Parses and resolves request body paths into absolute equivalents.
   const resolveRequestPaths = (candidate: unknown): string[] =>
     parsePaths(candidate).map((entryPath) => resolveWithinRoots(entryPath));
 
+  // Accepts optional destination roots and ensures they stay within bounds.
   const parseDestinationRoot = (candidate: unknown): string | undefined => {
     if (candidate == null) {
       return undefined;
@@ -56,6 +62,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     requireSelection?: boolean;
   }
 
+  // Normalizes operation responses, toggling between success and failure payloads.
   const sendOperationResponse = (
     res: Response,
     result: OperationResult,
@@ -76,6 +83,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     res.json(payload);
   };
 
+  // Executes a selection-based mutation while handling empty-selection guards.
   const performSelectionOperation = async (
     res: Response,
     operation: () => Promise<OperationResult>,
@@ -193,15 +201,18 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   return app;
 }
 
+// Instantiates the default FileExplorer backed by the Node filesystem.
 function createDefaultExplorer(): FileExplorer {
   return new FileExplorer(new NodeFileSystem());
 }
 
+// Expands allowed roots to absolute paths, defaulting to the cwd.
 function normalizeRoots(roots?: string[]): string[] {
   const candidates = roots?.length ? roots : [process.cwd()];
   return candidates.map((root) => path.resolve(root));
 }
 
+// Determines whether a candidate path is inside the permitted roots.
 function isWithinAllowed(candidate: string, allowedRoots: string[]): boolean {
   return allowedRoots.some((root) => {
     const relative = path.relative(root, candidate);
@@ -209,10 +220,12 @@ function isWithinAllowed(candidate: string, allowedRoots: string[]): boolean {
   });
 }
 
+// Serializes the explorer selection into a JSON-friendly payload.
 function createSelectionPayload(explorer: FileExplorer): { selection: string[] } {
   return { selection: explorer.getSelection() };
 }
 
+// Serializes mutation outcomes, optionally adding validation metadata.
 function createOperationPayload(
   result: OperationResult,
   explorer: FileExplorer,
@@ -248,6 +261,7 @@ function createOperationPayload(
   return payload;
 }
 
+// Extracts a friendly message and optional errno code from thrown errors.
 function normalizeOperationError(error: unknown): { message: string; code?: string } {
   if (error instanceof Error) {
     const nodeError = error as NodeJS.ErrnoException;
