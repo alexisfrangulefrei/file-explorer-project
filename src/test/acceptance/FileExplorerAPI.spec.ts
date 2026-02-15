@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 import { promises as fs } from 'fs';
 import http from 'http';
 import path from 'path';
@@ -232,17 +232,7 @@ test.describe('File Explorer API – move selection', () => {
         data: { destinationRoot }
       });
 
-      expect(response.status()).toBe(422);
-      const payload = await response.json();
-      expect(payload).toEqual({
-        error: 'Failed to move selection.',
-        details: {
-          processed: [],
-          failed: [],
-          selection: [],
-          validationErrors: ['Selection cannot be empty.']
-        }
-      });
+      await expectEmptySelectionValidationFailure(response, 'Failed to move selection.');
     } finally {
       await dispose();
     }
@@ -347,16 +337,7 @@ test.describe('File Explorer API – delete selection', () => {
   test('returns a validation error when delete is requested with an empty selection', async ({ request }) => {
     const response = await deleteSelection(request);
 
-    expect(response.status()).toBe(422);
-    expect(await response.json()).toEqual({
-      error: 'Failed to delete selection.',
-      details: {
-        processed: [],
-        failed: [],
-        selection: [],
-        validationErrors: ['Selection cannot be empty.']
-      }
-    });
+    await expectEmptySelectionValidationFailure(response, 'Failed to delete selection.');
   });
 });
 
@@ -387,6 +368,19 @@ async function expectSelection(request: APIRequestContext, expected: string[]): 
   const response = await request.get('/api/selection');
   expect(response.ok()).toBe(true);
   expect(await response.json()).toEqual({ selection: expected });
+}
+
+async function expectEmptySelectionValidationFailure(response: APIResponse, errorMessage: string): Promise<void> {
+  expect(response.status()).toBe(422);
+  expect(await response.json()).toEqual({
+    error: errorMessage,
+    details: {
+      processed: [],
+      failed: [],
+      selection: [],
+      validationErrors: ['Selection cannot be empty.']
+    }
+  });
 }
 
 async function useDestinationRoot(request: APIRequestContext): Promise<{ destinationRoot: string; dispose: () => Promise<void> }> {
