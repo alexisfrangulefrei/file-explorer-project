@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import path from 'path';
-import { FileExplorer, NodeFileSystem } from '../class/FileExplorer';
+import { FileExplorer, NodeFileSystem, OperationResult } from '../class/FileExplorer';
 
 export interface FileExplorerApiOptions {
   explorer?: FileExplorer;
@@ -32,6 +32,16 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
       throw new Error('paths must be an array of strings.');
     }
     return candidate as string[];
+  };
+
+  const parseDestinationRoot = (candidate: unknown): string | undefined => {
+    if (candidate == null) {
+      return undefined;
+    }
+    if (typeof candidate !== 'string') {
+      throw new Error('destinationRoot must be a string.');
+    }
+    return resolveWithinRoots(candidate);
   };
 
   app.get('/api/files', async (req, res) => {
@@ -88,6 +98,16 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.post('/api/selection/copy', async (req, res) => {
+    try {
+      const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
+      const result = await explorer.copySelection(destinationRoot);
+      res.json(createOperationPayload(result, explorer));
+    } catch (error) {
+      respondWithError(res, error);
+    }
+  });
+
   return app;
 }
 
@@ -109,4 +129,19 @@ function isWithinAllowed(candidate: string, allowedRoots: string[]): boolean {
 
 function createSelectionPayload(explorer: FileExplorer): { selection: string[] } {
   return { selection: explorer.getSelection() };
+}
+
+function createOperationPayload(result: OperationResult, explorer: FileExplorer): {
+  processed: string[];
+  failed: Array<{ path: string; error: string }>;
+  selection: string[];
+} {
+  return {
+    processed: result.processed,
+    failed: result.failed.map(({ path: failedPath, error }) => ({
+      path: failedPath,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })),
+    selection: explorer.getSelection()
+  };
 }
