@@ -239,7 +239,8 @@ test.describe('File Explorer API – move selection', () => {
         details: {
           processed: [],
           failed: [],
-          selection: []
+          selection: [],
+          validationErrors: ['Selection cannot be empty.']
         }
       });
     } finally {

@@ -49,6 +49,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
 
   interface OperationResponseOptions {
     forceFailure?: boolean;
+    validationErrors?: string[];
   }
 
   interface PerformOperationOptions {
@@ -62,7 +63,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     failureMessage: string,
     options: OperationResponseOptions = {}
   ): void => {
-    const payload = createOperationPayload(result, explorerInstance);
+    const payload = createOperationPayload(result, explorerInstance, options.validationErrors);
 
     if (options.forceFailure || payload.failed.length) {
       res.status(422).json({
@@ -87,7 +88,10 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
         { processed: [], failed: [] },
         explorer,
         failureMessage,
-        { forceFailure: true }
+        {
+          forceFailure: true,
+          validationErrors: ['Selection cannot be empty.']
+        }
       );
       return;
     }
@@ -209,12 +213,22 @@ function createSelectionPayload(explorer: FileExplorer): { selection: string[] }
   return { selection: explorer.getSelection() };
 }
 
-function createOperationPayload(result: OperationResult, explorer: FileExplorer): {
+function createOperationPayload(
+  result: OperationResult,
+  explorer: FileExplorer,
+  validationErrors?: string[]
+): {
   processed: string[];
   failed: Array<{ path: string; error: string }>;
   selection: string[];
+  validationErrors?: string[];
 } {
-  return {
+  const payload: {
+    processed: string[];
+    failed: Array<{ path: string; error: string }>;
+    selection: string[];
+    validationErrors?: string[];
+  } = {
     processed: result.processed,
     failed: result.failed.map(({ path: failedPath, error }) => ({
       path: failedPath,
@@ -222,4 +236,10 @@ function createOperationPayload(result: OperationResult, explorer: FileExplorer)
     })),
     selection: explorer.getSelection()
   };
+
+  if (validationErrors?.length) {
+    payload.validationErrors = validationErrors;
+  }
+
+  return payload;
 }
