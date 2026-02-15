@@ -339,6 +339,33 @@ test.describe('File Explorer API – delete selection', () => {
 
     await expectEmptySelectionValidationFailure(response, 'Failed to delete selection.');
   });
+
+  test('returns a failure response when delete cannot process the selection', async ({ request }) => {
+    const { blockedPath, dispose } = await createDeletionBlockedEntry();
+
+    try {
+      await selectPaths(request, [blockedPath]);
+      await expectSelection(request, [blockedPath]);
+
+      const response = await deleteSelection(request);
+
+      expect(response.status()).toBe(422);
+      const payload = await response.json();
+      expect(payload.error).toBe('Failed to delete selection.');
+      expect(payload.details).toEqual({
+        processed: [],
+        failed: [
+          {
+            path: blockedPath,
+            error: expect.stringMatching(/EACCES|EPERM/)
+          }
+        ],
+        selection: [blockedPath]
+      });
+    } finally {
+      await dispose();
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
@@ -381,6 +408,12 @@ async function expectEmptySelectionValidationFailure(response: APIResponse, erro
       validationErrors: ['Selection cannot be empty.']
     }
   });
+}
+
+async function createDeletionBlockedEntry(): Promise<{ blockedPath: string; dispose: () => Promise<void> }> {
+  const blockedPath = path.join(README_PATH, `blocked-child-${Date.now()}`);
+  const dispose = async (): Promise<void> => Promise.resolve();
+  return { blockedPath, dispose };
 }
 
 async function useDestinationRoot(request: APIRequestContext): Promise<{ destinationRoot: string; dispose: () => Promise<void> }> {
