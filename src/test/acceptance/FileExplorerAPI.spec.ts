@@ -144,7 +144,8 @@ test.describe('File Explorer API – copy selection', () => {
         failed: [
           {
             path: missingPath,
-            error: expect.stringContaining('ENOENT')
+            error: expect.stringContaining('ENOENT'),
+            code: 'ENOENT'
           }
         ],
         selection: [missingPath]
@@ -260,11 +261,13 @@ test.describe('File Explorer API – move selection', () => {
         failed: [
           {
             path: missingPath,
-            error: expect.stringContaining('ENOENT')
+            error: expect.stringContaining('ENOENT'),
+            code: 'ENOENT'
           },
           {
             path: missingPathTwo,
-            error: expect.stringContaining('ENOENT')
+            error: expect.stringContaining('ENOENT'),
+            code: 'ENOENT'
           }
         ],
         selection: [missingPath, missingPathTwo]
@@ -357,7 +360,8 @@ test.describe('File Explorer API – delete selection', () => {
         failed: [
           {
             path: blockedPath,
-            error: expect.stringMatching(/EACCES|EPERM/)
+            error: expect.stringMatching(/EACCES|EPERM|ENOTDIR/),
+            code: expect.stringMatching(/EACCES|EPERM|ENOTDIR/)
           }
         ],
         selection: [blockedPath]

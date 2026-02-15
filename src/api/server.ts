@@ -219,21 +219,25 @@ function createOperationPayload(
   validationErrors?: string[]
 ): {
   processed: string[];
-  failed: Array<{ path: string; error: string }>;
+  failed: Array<{ path: string; error: string; code?: string }>;
   selection: string[];
   validationErrors?: string[];
 } {
   const payload: {
     processed: string[];
-    failed: Array<{ path: string; error: string }>;
+    failed: Array<{ path: string; error: string; code?: string }>;
     selection: string[];
     validationErrors?: string[];
   } = {
     processed: result.processed,
-    failed: result.failed.map(({ path: failedPath, error }) => ({
-      path: failedPath,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })),
+    failed: result.failed.map(({ path: failedPath, error }) => {
+      const { message, code } = normalizeOperationError(error);
+      return {
+        path: failedPath,
+        error: message,
+        ...(code ? { code } : {})
+      };
+    }),
     selection: explorer.getSelection()
   };
 
@@ -242,4 +246,16 @@ function createOperationPayload(
   }
 
   return payload;
+}
+
+function normalizeOperationError(error: unknown): { message: string; code?: string } {
+  if (error instanceof Error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    return {
+      message: error.message,
+      code: typeof nodeError.code === 'string' ? nodeError.code : undefined
+    };
+  }
+
+  return { message: 'Unknown error' };
 }
