@@ -1,6 +1,6 @@
 # File Explorer Project
 
-Small TypeScript file explorer project meant to practice class tests with dependencies and Test-Driven Development (TDD).
+Small TypeScript file explorer project meant to practice class tests with dependencies, Test-Driven Development (TDD) and Acceptance Test Driven Development (ATDD).
 
 ## Prerequisites
 
