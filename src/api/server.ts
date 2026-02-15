@@ -101,7 +101,17 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
       const result = await explorer.copySelection(destinationRoot);
-      res.json(createOperationPayload(result, explorer));
+      const payload = createOperationPayload(result, explorer);
+
+      if (payload.failed.length) {
+        res.status(422).json({
+          error: 'Failed to copy selection.',
+          details: payload
+        });
+        return;
+      }
+
+      res.json(payload);
     } catch (error) {
       respondWithError(res, error);
     }
