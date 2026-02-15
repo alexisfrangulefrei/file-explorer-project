@@ -156,6 +156,10 @@ test.describe('File Explorer API – copy selection', () => {
 });
 
 test.describe('File Explorer API – move selection', () => {
+  test.beforeEach(async ({ request }) => {
+    await request.post('/api/selection/clear');
+  });
+
   test('moves the current selection into the provided destination root', async ({ request }) => {
     const { destinationRoot, dispose: disposeDestination } = await useDestinationRoot(request);
     const { paths: sourcePaths, dispose: disposeSources } = await createTemporarySourceEntries(['temp-file.txt']);
