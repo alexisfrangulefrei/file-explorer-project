@@ -117,6 +117,26 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.post('/api/selection/move', async (req, res) => {
+    try {
+      const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
+      const result = await explorer.moveSelection(destinationRoot);
+      const payload = createOperationPayload(result, explorer);
+
+      if (payload.failed.length) {
+        res.status(422).json({
+          error: 'Failed to move selection.',
+          details: payload
+        });
+        return;
+      }
+
+      res.json(payload);
+    } catch (error) {
+      respondWithError(res, error);
+    }
+  });
+
   return app;
 }
 
