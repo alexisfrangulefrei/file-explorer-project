@@ -47,6 +47,25 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     return resolveWithinRoots(candidate);
   };
 
+  const sendOperationResponse = (
+    res: Response,
+    result: OperationResult,
+    explorerInstance: FileExplorer,
+    failureMessage: string
+  ): void => {
+    const payload = createOperationPayload(result, explorerInstance);
+
+    if (payload.failed.length) {
+      res.status(422).json({
+        error: failureMessage,
+        details: payload
+      });
+      return;
+    }
+
+    res.json(payload);
+  };
+
   app.get('/api/files', async (req, res) => {
     try {
       const directory = resolveWithinRoots(typeof req.query.path === 'string' ? req.query.path : undefined);
@@ -101,17 +120,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
       const result = await explorer.copySelection(destinationRoot);
-      const payload = createOperationPayload(result, explorer);
-
-      if (payload.failed.length) {
-        res.status(422).json({
-          error: 'Failed to copy selection.',
-          details: payload
-        });
-        return;
-      }
-
-      res.json(payload);
+      sendOperationResponse(res, result, explorer, 'Failed to copy selection.');
     } catch (error) {
       respondWithError(res, error);
     }
@@ -121,17 +130,7 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
       const result = await explorer.moveSelection(destinationRoot);
-      const payload = createOperationPayload(result, explorer);
-
-      if (payload.failed.length) {
-        res.status(422).json({
-          error: 'Failed to move selection.',
-          details: payload
-        });
-        return;
-      }
-
-      res.json(payload);
+      sendOperationResponse(res, result, explorer, 'Failed to move selection.');
     } catch (error) {
       respondWithError(res, error);
     }
