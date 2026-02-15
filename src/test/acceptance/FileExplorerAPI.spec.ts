@@ -286,6 +286,10 @@ test.describe('File Explorer API – move selection', () => {
 
 test.describe('File Explorer API – delete selection', () => {
   const deleteSelection = (request: APIRequestContext) => request.delete('/api/selection');
+  const selectPaths = (request: APIRequestContext, paths: string[]) =>
+    request.post('/api/selection/select', {
+      data: { paths }
+    });
 
   test.beforeEach(async ({ request }) => {
     await request.post('/api/selection/clear');
@@ -296,9 +300,7 @@ test.describe('File Explorer API – delete selection', () => {
     const [targetPath] = sourcePaths;
 
     try {
-      await request.post('/api/selection/select', {
-        data: { paths: [targetPath] }
-      });
+      await selectPaths(request, [targetPath]);
       await expectSelection(request, [targetPath]);
 
       const response = await deleteSelection(request);
@@ -323,9 +325,7 @@ test.describe('File Explorer API – delete selection', () => {
     const { paths: sourcePaths, dispose } = await createTemporarySourceEntries(filenames);
 
     try {
-      await request.post('/api/selection/select', {
-        data: { paths: sourcePaths }
-      });
+      await selectPaths(request, sourcePaths);
       await expectSelection(request, sourcePaths);
 
       const response = await deleteSelection(request);
