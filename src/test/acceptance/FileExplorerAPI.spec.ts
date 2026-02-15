@@ -155,6 +155,40 @@ test.describe('File Explorer API – copy selection', () => {
   });
 });
 
+test.describe('File Explorer API – move selection', () => {
+  test('moves the current selection into the provided destination root', async ({ request }) => {
+    const { destinationRoot, dispose: disposeDestination } = await useDestinationRoot(request);
+    const { paths: sourcePaths, dispose: disposeSources } = await createTemporarySourceEntries(['temp-file.txt']);
+    const [sourcePath] = sourcePaths;
+    const expectedMovedPath = path.join(destinationRoot, path.basename(sourcePath));
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: [sourcePath] }
+      });
+
+      const response = await request.post('/api/selection/move', {
+        data: { destinationRoot }
+      });
+
+      expect(response.ok()).toBe(true);
+      const payload = await response.json();
+      expect(payload).toEqual({
+        processed: [expectedMovedPath],
+        failed: [],
+        selection: [expectedMovedPath]
+      });
+
+      await assertFileExists(expectedMovedPath);
+      await assertFileMissing(sourcePath);
+      await expectSelection(request, [expectedMovedPath]);
+    } finally {
+      await disposeSources();
+      await disposeDestination();
+    }
+  });
+});
+
 function startServer(): Promise<http.Server> {
   const app = createFileExplorerApp({ allowedRoots: [FIXTURE_ROOT] });
   return new Promise((resolve) => {
@@ -196,4 +230,23 @@ async function useDestinationRoot(request: APIRequestContext): Promise<{ destina
 async function assertFileExists(target: string): Promise<void> {
   const stats = await fs.stat(target);
   expect(stats.isFile()).toBe(true);
+}
+
+async function assertFileMissing(target: string): Promise<void> {
+  await expect(fs.stat(target)).rejects.toMatchObject({ code: 'ENOENT' });
+}
+
+async function createTemporarySourceEntries(filenames: string[]): Promise<{ paths: string[]; dispose: () => Promise<void> }> {
+  const directory = await fs.mkdtemp(path.join(FIXTURE_ROOT, '.move-source-'));
+  const paths = await Promise.all(
+    filenames.map(async (filename) => {
+      const filePath = path.join(directory, filename);
+      await fs.writeFile(filePath, `temporary content for ${filename}`);
+      return filePath;
+    })
+  );
+  const dispose = async (): Promise<void> => {
+    await fs.rm(directory, { recursive: true, force: true });
+  };
+  return { paths, dispose };
 }
