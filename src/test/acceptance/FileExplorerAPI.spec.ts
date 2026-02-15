@@ -285,6 +285,8 @@ test.describe('File Explorer API – move selection', () => {
 });
 
 test.describe('File Explorer API – delete selection', () => {
+  const deleteSelection = (request: APIRequestContext) => request.delete('/api/selection');
+
   test.beforeEach(async ({ request }) => {
     await request.post('/api/selection/clear');
   });
@@ -299,7 +301,7 @@ test.describe('File Explorer API – delete selection', () => {
       });
       await expectSelection(request, [targetPath]);
 
-      const response = await request.delete('/api/selection');
+      const response = await deleteSelection(request);
 
       expect(response.ok()).toBe(true);
       const payload = await response.json();
