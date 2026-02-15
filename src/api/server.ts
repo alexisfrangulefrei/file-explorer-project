@@ -173,6 +173,19 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
   });
 
+  app.delete('/api/selection', async (_req, res) => {
+    try {
+      await performSelectionOperation(
+        res,
+        () => explorer.deleteSelection(),
+        'Failed to delete selection.',
+        { requireSelection: true }
+      );
+    } catch (error) {
+      respondWithError(res, error);
+    }
+  });
+
   return app;
 }
 
