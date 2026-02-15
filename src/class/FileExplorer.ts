@@ -251,11 +251,13 @@ export class FileExplorer {
 
   // Deletes all selected entries from the filesystem.
   async deleteSelection(): Promise<OperationResult> {
-    return this.runOperation(this.snapshotSelection(), async (source) => {
+    const outcome = await this.runOperation(this.snapshotSelection(), async (source) => {
       await this.fsPort.rm(source, { recursive: true, force: true });
       this.selection.delete(source);
       return source;
     });
+
+    return this.normalizeOperationOutcome(outcome, { synchronizeSelection: true });
   }
 
   // Translates a filesystem entry into a FileEntry with absolute data.
