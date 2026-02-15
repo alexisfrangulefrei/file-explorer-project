@@ -51,6 +51,10 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     forceFailure?: boolean;
   }
 
+  interface PerformOperationOptions {
+    requireSelection?: boolean;
+  }
+
   const sendOperationResponse = (
     res: Response,
     result: OperationResult,
@@ -69,6 +73,27 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
     }
 
     res.json(payload);
+  };
+
+  const performSelectionOperation = async (
+    res: Response,
+    operation: () => Promise<OperationResult>,
+    failureMessage: string,
+    options: PerformOperationOptions = {}
+  ): Promise<void> => {
+    if (options.requireSelection && !explorer.getSelection().length) {
+      sendOperationResponse(
+        res,
+        { processed: [], failed: [] },
+        explorer,
+        failureMessage,
+        { forceFailure: true }
+      );
+      return;
+    }
+
+    const result = await operation();
+    sendOperationResponse(res, result, explorer, failureMessage);
   };
 
   app.get('/api/files', async (req, res) => {
@@ -124,8 +149,11 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   app.post('/api/selection/copy', async (req, res) => {
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
-      const result = await explorer.copySelection(destinationRoot);
-      sendOperationResponse(res, result, explorer, 'Failed to copy selection.');
+      await performSelectionOperation(
+        res,
+        () => explorer.copySelection(destinationRoot),
+        'Failed to copy selection.'
+      );
     } catch (error) {
       respondWithError(res, error);
     }
@@ -134,14 +162,12 @@ export function createFileExplorerApp(options: FileExplorerApiOptions = {}): exp
   app.post('/api/selection/move', async (req, res) => {
     try {
       const destinationRoot = parseDestinationRoot(req.body?.destinationRoot);
-      if (!explorer.getSelection().length) {
-        sendOperationResponse(res, { processed: [], failed: [] }, explorer, 'Failed to move selection.', {
-          forceFailure: true
-        });
-        return;
-      }
-      const result = await explorer.moveSelection(destinationRoot);
-      sendOperationResponse(res, result, explorer, 'Failed to move selection.');
+      await performSelectionOperation(
+        res,
+        () => explorer.moveSelection(destinationRoot),
+        'Failed to move selection.',
+        { requireSelection: true }
+      );
     } catch (error) {
       respondWithError(res, error);
     }
