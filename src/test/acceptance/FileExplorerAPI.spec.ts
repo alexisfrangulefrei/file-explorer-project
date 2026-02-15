@@ -124,6 +124,39 @@ test.describe('File Explorer API – copy selection', () => {
       await request.post('/api/selection/clear');
     }
   });
+
+  test('returns a failure response when copy cannot process the selection', async ({ request }) => {
+    await request.post('/api/selection/clear');
+    const destinationRoot = await createDestinationRoot();
+    const missingPath = path.join(FIXTURE_ROOT, 'does-not-exist.txt');
+
+    try {
+      await request.post('/api/selection/select', {
+        data: { paths: [missingPath] }
+      });
+
+      const response = await request.post('/api/selection/copy', {
+        data: { destinationRoot }
+      });
+
+      expect(response.status()).toBe(422);
+      const payload = await response.json();
+      expect(payload.error).toBe('Failed to copy selection.');
+      expect(payload.details).toEqual({
+        processed: [],
+        failed: [
+          {
+            path: missingPath,
+            error: expect.stringContaining('ENOENT')
+          }
+        ],
+        selection: [missingPath]
+      });
+    } finally {
+      await cleanupPath(destinationRoot);
+      await request.post('/api/selection/clear');
+    }
+  });
 });
 
 function startServer(): Promise<http.Server> {
